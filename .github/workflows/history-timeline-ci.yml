@@ -1,0 +1,89 @@
+# Continuous integration for the history-timeline project.
+#
+# The job of CI is to answer one question on every push: "would this break if we
+# shipped it?" Everything below is in service of answering that FAST and with no
+# false positives — a pipeline people trust is a pipeline people read.
+name: history-timeline CI
+
+on:
+  push:
+    branches: ['**']
+    paths: ['history-timeline/**', '.github/workflows/history-timeline-ci.yml']
+  pull_request:
+    paths: ['history-timeline/**', '.github/workflows/history-timeline-ci.yml']
+
+# A new push to the same branch cancels the previous run. No point spending
+# minutes verifying a commit that has already been replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: history-timeline
+
+jobs:
+  verify:
+    name: Typecheck, test and build
+    runs-on: ubuntu-latest
+
+    # A real PostgreSQL for the opt-in repository contract tests. This is what
+    # makes "it passed in CI" mean something about production.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: historian
+          POSTGRES_PASSWORD: historian
+          POSTGRES_DB: history_timeline
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U historian -d history_timeline"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://historian:historian@localhost:5432/history_timeline
+      TEST_DATABASE_URL: postgres://historian:historian@localhost:5432/history_timeline
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: history-timeline/package-lock.json
+
+      # `npm ci`, never `npm install`: it installs exactly the lockfile, so CI
+      # tests the dependency tree you committed rather than whatever published
+      # five minutes ago.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: |
+          npm run typecheck --workspace=server
+          npm run typecheck --workspace=client
+
+      - name: Migrate and seed the test database
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
+      # Runs the full suite INCLUDING the Postgres contract tests, because
+      # TEST_DATABASE_URL is set above.
+      - name: Test
+        run: npm test
+
+      # A green test suite that does not compile helps nobody.
+      - name: Build
+        run: npm run build
+
+      - name: Upload the built client
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: history-timeline/client/dist
+          retention-days: 7

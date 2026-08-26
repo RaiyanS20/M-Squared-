@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import type { PostgresDatabase } from '../../db/Database.js';
+import type { HealthCheck } from '../../db/Database.js';
 import { asyncRoute } from '../asyncRoute.js';
 
 /**
@@ -12,7 +12,7 @@ import { asyncRoute } from '../asyncRoute.js';
  *                returning 500s to real users.
  */
 export class HealthController {
-  constructor(private readonly db: PostgresDatabase | null) {}
+  constructor(private readonly db: HealthCheck | null) {}
 
   routes(): Router {
     const router = Router();

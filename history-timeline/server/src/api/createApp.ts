@@ -1,14 +1,15 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
 import type { TimelineService } from '../services/index.js';
-import type { PostgresDatabase } from '../db/Database.js';
+import type { HealthCheck } from '../db/Database.js';
 import { TimelineController } from './controllers/TimelineController.js';
 import { HealthController } from './controllers/HealthController.js';
 import { errorHandler, notFoundHandler } from './errorHandler.js';
 
 export interface AppDependencies {
   service: TimelineService;
-  db?: PostgresDatabase | null;
+  /** Anything that can answer "is the datastore usable?" — see HealthCheck. */
+  db?: HealthCheck | null;
   corsOrigins: string[];
   isProduction: boolean;
 }

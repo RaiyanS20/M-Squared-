@@ -1,0 +1,60 @@
+{
+  "_comment": [
+    "ECS Fargate task definition for the API. Replace every <PLACEHOLDER>.",
+    "Register with: aws ecs register-task-definition --cli-input-json file://task-definition.json",
+    "",
+    "The two things worth understanding here:",
+    "  * `secrets` (not `environment`) for DATABASE_URL. Values in `environment`",
+    "    are visible to anyone who can describe the task. `secrets` are fetched",
+    "    from Secrets Manager at start-up and never appear in the definition.",
+    "  * cpu/memory are per TASK and Fargate only accepts specific pairings;",
+    "    256/512 is the smallest and is plenty for this workload."
+  ],
+  "family": "history-timeline-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/historyTimelineTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "<ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/history-timeline-api:<TAG>",
+      "essential": true,
+      "portMappings": [{ "containerPort": 4000, "protocol": "tcp" }],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "4000" },
+        { "name": "DATABASE_SSL", "value": "true" },
+        { "name": "CORS_ORIGINS", "value": "https://<YOUR_DOMAIN>" }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:history-timeline/database-url"
+        }
+      ],
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "node -e \"fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 10
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/history-timeline-api",
+          "awslogs-region": "<REGION>",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "stopTimeout": 30
+    }
+  ]
+}

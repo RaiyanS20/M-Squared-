@@ -15,6 +15,18 @@ export interface QueryRunner {
   ): Promise<T[]>;
 }
 
+/**
+ * "Something that can report whether it is usable."
+ *
+ * The health endpoint needs exactly one method, so this is what it depends on —
+ * not the concrete `PostgresDatabase`. Interface segregation again: the API
+ * layer stays free of any storage-specific type, and a test can pass `null` or
+ * a two-line fake.
+ */
+export interface HealthCheck {
+  isHealthy(): Promise<boolean>;
+}
+
 export interface DatabaseConfig {
   connectionString: string;
   /** Enable TLS. Required by AWS RDS in production. */
@@ -29,7 +41,7 @@ export interface DatabaseConfig {
  * constructed in `main.ts` and passed down. That is dependency injection done by
  * hand — no framework, no magic, and completely explicit about who owns what.
  */
-export class PostgresDatabase implements QueryRunner {
+export class PostgresDatabase implements QueryRunner, HealthCheck {
   private readonly pool: pg.Pool;
 
   constructor(config: DatabaseConfig) {
