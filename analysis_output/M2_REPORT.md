@@ -83,13 +83,15 @@ M² = π·d₀·θ/(8λ), so any change in M² is a change in the waist diameter
 
 ## Figures
 
+Each figure is written as PDF (vector, for LaTeX), SVG (vector, for editing) and PNG (for quick viewing).
+
 | file | what it shows |
 |---|---|
-| `caustics_50um.png`, `caustics_105um.png` | every measured caustic with its fit; ✕ marks a frame rejected from the fit |
-| `m2_vs_magnets.png` | M² vs magnet count, Normal vs Alternating, per fibre and arm |
-| `m2_summary_bars.png` | the headline: change in M² relative to each fibre's own baseline, with ±2 s.e. bars |
-| `waist_divergence.png` | whether a given change came from the waist or the divergence |
-| `example_beams.png` | near-waist speckle pattern per condition — the 105 µm fibre visibly carries many more speckle grains, i.e. more modes |
+| `caustics_50um.pdf`, `caustics_105um.pdf` | every measured caustic with its fit; ✕ marks a frame rejected from the fit |
+| `m2_vs_magnets.pdf` | M² vs magnet count, Normal vs Alternating, per fibre and arm |
+| `m2_summary_bars.pdf` | the headline: change in M² relative to each fibre's own baseline, with ±2 s.e. bars |
+| `waist_divergence.pdf` | whether a given change came from the waist or the divergence |
+| `example_beams.pdf` | near-waist speckle pattern per condition — the 105 µm fibre visibly carries many more speckle grains, i.e. more modes |
 
 ## Data quality flags
 

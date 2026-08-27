@@ -845,11 +845,35 @@ def _style():
         "axes.spines.top": False, "axes.spines.right": False,
         "font.size": 9, "axes.titlesize": 10, "figure.dpi": 130,
         "legend.frameon": False,
+        # Vector output: keep SVG text as real text (selectable and editable in
+        # Illustrator/Inkscape) and embed TrueType rather than Type-3 in the
+        # PDF, which is what journals and LaTeX pipelines expect.
+        "svg.fonttype": "none",
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
     })
     return plt
 
 
-def plot_caustics(results, fiber, outpath, args):
+# Formats every figure is written in. PDF is the one to use in LaTeX; SVG is
+# for editing by hand; PNG is kept for quick viewing and for any consumer that
+# cannot take vector art.
+FIGURE_FORMATS = ("pdf", "svg", "png")
+
+
+def _save(fig, stem: str, formats=None):
+    """Write one figure to every requested format. `stem` carries no extension."""
+    written = []
+    for ext in (formats or FIGURE_FORMATS):
+        path = f"{stem}.{ext}"
+        # Raster panels (the beam images) stay raster inside the vector file;
+        # 300 dpi keeps them sharp in print without bloating the PDF.
+        fig.savefig(path, dpi=300, bbox_inches="tight", pad_inches=0.05)
+        written.append(path)
+    return written
+
+
+def plot_caustics(results, fiber, stem, args, formats=None):
     plt = _style()
     rs = [r for r in results
           if r.scan.family == "step-index" and r.scan.fiber == fiber
@@ -898,7 +922,7 @@ def plot_caustics(results, fiber, outpath, args):
                  f"(λ={args.wavelength_nm:g} nm, {args.z_step_mm:g} mm per step)",
                  fontsize=11, color=C_INK)
     fig.tight_layout(rect=(0, 0, 1, 0.96))
-    fig.savefig(outpath)
+    _save(fig, stem, formats)
     plt.close(fig)
 
 
@@ -910,7 +934,7 @@ def _curve(z_mm, fit: CausticFit, args):
     return np.sqrt(d0 ** 2 + (fit.m2 * 4.0 * lam_um / (math.pi * d0)) ** 2 * z_um ** 2)
 
 
-def plot_m2_vs_magnets(summary, outpath, args):
+def plot_m2_vs_magnets(summary, stem, args, formats=None):
     plt = _style()
     fibers = sorted({k[0] for k in summary}, key=lambda f: int(f))
     axes_order = ["H", "V"]
@@ -959,11 +983,11 @@ def plot_m2_vs_magnets(summary, outpath, args):
                  f"(error bars = spread over trials and H/V fits; λ={args.wavelength_nm:g} nm)",
                  fontsize=11, color=C_INK)
     fig.tight_layout(rect=(0, 0, 1, 0.93))
-    fig.savefig(outpath)
+    _save(fig, stem, formats)
     plt.close(fig)
 
 
-def plot_summary_bars(summary, outpath):
+def plot_summary_bars(summary, stem, formats=None):
     """Change in M^2 relative to the 0-magnet baseline of the same fibre.
 
     The magnet effects are a few percent on top of baselines that differ by
@@ -1016,7 +1040,7 @@ def plot_summary_bars(summary, outpath):
                  "(error bars = ±2 standard errors; a bar not crossing zero is a real effect)",
                  fontsize=11, color=C_INK)
     fig.tight_layout(rect=(0, 0, 1, 0.9))
-    fig.savefig(outpath)
+    _save(fig, stem, formats)
     plt.close(fig)
 
 
@@ -1039,7 +1063,7 @@ def _combine_stats(summary, fiber, magnets, config):
     return m, sem
 
 
-def plot_waist_divergence(summary, outpath):
+def plot_waist_divergence(summary, stem, formats=None):
     """Separate the M^2 change into its two factors: M^2 = pi*d0*theta/(8*lambda).
 
     Plotted as a change relative to each fibre's own 0-magnet baseline -- the two
@@ -1085,11 +1109,11 @@ def plot_waist_divergence(summary, outpath):
                  "each relative to its own 0-magnet baseline)",
                  fontsize=10, color=C_INK)
     fig.tight_layout(rect=(0, 0, 1, 0.88))
-    fig.savefig(outpath)
+    _save(fig, stem, formats)
     plt.close(fig)
 
 
-def plot_example_beams(results, outpath):
+def plot_example_beams(results, stem, formats=None):
     plt = _style()
     picks = []
     for fiber in ("50", "105"):
@@ -1130,7 +1154,7 @@ def plot_example_beams(results, outpath):
     fig.suptitle("Near-waist speckle / intensity profile for each condition",
                  fontsize=11, color=C_INK)
     fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(outpath)
+    _save(fig, stem, formats)
     plt.close(fig)
 
 
@@ -1219,15 +1243,17 @@ def write_report(results, summary, outdir, args):
         A(para + "\n")
 
     A("\n## Figures\n")
+    A("Each figure is written as PDF (vector, for LaTeX), SVG (vector, for "
+      "editing) and PNG (for quick viewing).\n")
     A("| file | what it shows |")
     A("|---|---|")
-    A("| `caustics_50um.png`, `caustics_105um.png` | every measured caustic with "
+    A("| `caustics_50um.pdf`, `caustics_105um.pdf` | every measured caustic with "
       "its fit; ✕ marks a frame rejected from the fit |")
-    A("| `m2_vs_magnets.png` | M² vs magnet count, Normal vs Alternating, per fibre and arm |")
-    A("| `m2_summary_bars.png` | the headline: change in M² relative to each "
+    A("| `m2_vs_magnets.pdf` | M² vs magnet count, Normal vs Alternating, per fibre and arm |")
+    A("| `m2_summary_bars.pdf` | the headline: change in M² relative to each "
       "fibre's own baseline, with ±2 s.e. bars |")
-    A("| `waist_divergence.png` | whether a given change came from the waist or the divergence |")
-    A("| `example_beams.png` | near-waist speckle pattern per condition — the "
+    A("| `waist_divergence.pdf` | whether a given change came from the waist or the divergence |")
+    A("| `example_beams.pdf` | near-waist speckle pattern per condition — the "
       "105 µm fibre visibly carries many more speckle grains, i.e. more modes |")
 
     A("\n## Data quality flags\n")
@@ -1435,6 +1461,9 @@ def main(argv=None):
     p.add_argument("--step-index-only", action="store_true",
                    help="skip the earlier/legacy folders that do not name the fibre")
     p.add_argument("--no-plots", action="store_true")
+    p.add_argument("--formats", default=",".join(FIGURE_FORMATS),
+                   help="comma-separated figure formats to write "
+                        "(pdf and svg are vector; default: %(default)s)")
     p.add_argument("--no-cache", action="store_true",
                    help="ignore and do not write the cached per-frame widths")
     args = p.parse_args(argv)
@@ -1455,13 +1484,16 @@ def main(argv=None):
     write_csvs(results, summary, args.out)
 
     if not args.no_plots:
+        fmts = tuple(f.strip().lower() for f in args.formats.split(',') if f.strip())
         for fiber in sorted({k[0] for k in summary}, key=lambda f: int(f)):
-            plot_caustics(results, fiber, os.path.join(args.out, f"caustics_{fiber}um.png"), args)
+            plot_caustics(results, fiber,
+                          os.path.join(args.out, f"caustics_{fiber}um"), args, fmts)
         if summary:
-            plot_m2_vs_magnets(summary, os.path.join(args.out, "m2_vs_magnets.png"), args)
-            plot_summary_bars(summary, os.path.join(args.out, "m2_summary_bars.png"))
-            plot_waist_divergence(summary, os.path.join(args.out, "waist_divergence.png"))
-            plot_example_beams(results, os.path.join(args.out, "example_beams.png"))
+            plot_m2_vs_magnets(summary, os.path.join(args.out, "m2_vs_magnets"), args, fmts)
+            plot_summary_bars(summary, os.path.join(args.out, "m2_summary_bars"), fmts)
+            plot_waist_divergence(summary, os.path.join(args.out, "waist_divergence"), fmts)
+            plot_example_beams(results, os.path.join(args.out, "example_beams"), fmts)
+        print(f"Figures written as: {', '.join(fmts)}")
 
     report = write_report(results, summary, args.out, args)
     print("\n" + report.split("## Conclusion")[-1].split("## Data quality")[0])

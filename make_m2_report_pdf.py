@@ -23,9 +23,13 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import (BaseDocTemplate, Frame, Image, KeepTogether,
-                                NextPageTemplate, PageBreak, PageTemplate,
-                                Paragraph, Spacer, Table, TableStyle)
+from reportlab.platypus import (BaseDocTemplate, Flowable, Frame, Image,
+                                KeepTogether, NextPageTemplate, PageBreak,
+                                PageTemplate, Paragraph, Spacer, Table,
+                                TableStyle)
+from pdfrw import PdfReader
+from pdfrw.buildxobj import pagexobj
+from pdfrw.toreportlab import makerl
 
 OUT = "M2_Report_Chapter5.pdf"
 ANALYSIS = "analysis_output"
@@ -166,16 +170,53 @@ def callout(text, s, colour=ACCENT, bg=colors.HexColor("#f2f6fc")):
     return t
 
 
-def figure(path, caption, s, width=165 * mm, max_h=205 * mm):
-    from PIL import Image as PILImage
-    with PILImage.open(path) as im:
-        w, h = im.size
-    scale = width / w
-    if h * scale > max_h:
-        scale = max_h / h
-    img = Image(path, width=w * scale, height=h * scale)
-    img.hAlign = "CENTER"
-    return KeepTogether([img, Paragraph(caption, s["caption"])])
+class VectorFigure(Flowable):
+    """Places a one-page PDF figure into the story without rasterising it.
+
+    The matplotlib PDF is imported as a form XObject, so the curves, text and
+    axes stay vector all the way into the report: they can be zoomed and
+    printed at any size, and the text remains selectable and searchable.
+    """
+
+    def __init__(self, path, width, max_h):
+        super().__init__()
+        page = PdfReader(path).pages[0]
+        self.xobj = pagexobj(page)
+        bx = self.xobj.BBox
+        self.x0, self.y0 = float(bx[0]), float(bx[1])
+        w = float(bx[2]) - self.x0
+        h = float(bx[3]) - self.y0
+        self.scale = min(width / w, max_h / h)
+        self.width = w * self.scale
+        self.height = h * self.scale
+
+    def wrap(self, availWidth, availHeight):
+        return self.width, self.height
+
+    def draw(self):
+        ref = makerl(self.canv, self.xobj)
+        self.canv.saveState()
+        self.canv.scale(self.scale, self.scale)
+        self.canv.translate(-self.x0, -self.y0)
+        self.canv.doForm(ref)
+        self.canv.restoreState()
+
+
+def figure(stem, caption, s, width=165 * mm, max_h=205 * mm):
+    """Lay out a figure with its caption, preferring the vector PDF."""
+    pdf_path = f"{stem}.pdf"
+    if os.path.exists(pdf_path):
+        art = VectorFigure(pdf_path, width, max_h)
+        art.hAlign = "CENTER"
+    else:
+        from PIL import Image as PILImage
+        png = f"{stem}.png"
+        with PILImage.open(png) as im:
+            w, h = im.size
+        scale = min(width / w, max_h / h)
+        art = Image(png, width=w * scale, height=h * scale)
+        art.hAlign = "CENTER"
+    return KeepTogether([art, Paragraph(caption, s["caption"])])
 
 
 # ---------------------------------------------------------------------------
@@ -329,7 +370,7 @@ def build():
     # ------------------------------------------------------------- results
     P("4. The measurements", "h1")
 
-    E.append(figure(os.path.join(ANALYSIS, "caustics_50um.png"),
+    E.append(figure(os.path.join(ANALYSIS, "caustics_50um"),
                     "<b>Figure 1.</b> Measured caustics for the 50 &#181;m step-index "
                     "fibre. Each panel is one magnet count; rows are the two "
                     "polarisation arms. Points are measured D4&#963; diameters, "
@@ -340,7 +381,7 @@ def build():
                     "the start of the travel &mdash; see the limitation in Section 8.",
                     s, max_h=118 * mm))
 
-    E.append(figure(os.path.join(ANALYSIS, "caustics_105um.png"),
+    E.append(figure(os.path.join(ANALYSIS, "caustics_105um"),
                     "<b>Figure 2.</b> The same for the 105 &#181;m fibre. The beam is "
                     "visibly larger at every z, consistent with the larger modal "
                     "volume. One session (the scans without a trial number in the "
@@ -351,7 +392,7 @@ def build():
                     "rest, and they are retained.",
                     s, max_h=118 * mm))
 
-    E.append(figure(os.path.join(ANALYSIS, "m2_summary_bars.png"),
+    E.append(figure(os.path.join(ANALYSIS, "m2_summary_bars"),
                     "<b>Figure 3.</b> The headline result: change in M<super>2</super> "
                     "relative to each fibre's own 0-magnet baseline, so that the "
                     "few-percent effect under test is not hidden by the almost "
@@ -362,7 +403,7 @@ def build():
                     "<i>reduction</i> in M<super>2</super>.",
                     s, max_h=95 * mm))
 
-    E.append(figure(os.path.join(ANALYSIS, "m2_vs_magnets.png"),
+    E.append(figure(os.path.join(ANALYSIS, "m2_vs_magnets"),
                     "<b>Figure 4.</b> Absolute M<super>2</super> against magnet count, "
                     "split by fibre and by polarisation arm, with the uniform "
                     "(&ldquo;Normal&rdquo;) and alternating configurations overlaid. "
@@ -372,7 +413,7 @@ def build():
                     "two fibres, all of these traces would be flat lines.",
                     s, max_h=125 * mm))
 
-    E.append(figure(os.path.join(ANALYSIS, "waist_divergence.png"),
+    E.append(figure(os.path.join(ANALYSIS, "waist_divergence"),
                     "<b>Figure 5.</b> M<super>2</super> = &#960;&#183;d<sub>0</sub>"
                     "&#183;&#952;/(8&#955;), so any change in it is a change in the "
                     "waist diameter, the far-field divergence, or both. Splitting the "
@@ -382,7 +423,7 @@ def build():
                     "(alternating, 50 magnets) comes through a lower divergence.",
                     s, max_h=95 * mm))
 
-    E.append(figure(os.path.join(ANALYSIS, "example_beams.png"),
+    E.append(figure(os.path.join(ANALYSIS, "example_beams"),
                     "<b>Figure 6.</b> The near-waist intensity pattern for each "
                     "condition, cropped to the beam and stretched to the 99.5th "
                     "percentile. The 105 &#181;m fibre carries visibly finer and far "
@@ -661,7 +702,11 @@ def build():
       "quality flag and every rejected frame, so any figure here can be traced back "
       "to individual images. This PDF is generated by "
       "<font face='Mono' size='8.6'>make_m2_report_pdf.py</font> and reads those CSVs "
-      "directly, so the prose cannot drift from the data."
+      "directly, so the prose cannot drift from the data. Every figure is "
+      "written as PDF, SVG and PNG; the figures embedded above are the "
+      "vector PDFs, so they stay sharp at any zoom and can be dropped "
+      "straight into a LaTeX document with "
+      "<font face='Mono' size='8.6'>\\includegraphics</font>."
       % (len(frames), fits.shape[0]))
 
     doc.build(E)
