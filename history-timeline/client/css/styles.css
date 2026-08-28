@@ -1,0 +1,424 @@
+/*
+ * One stylesheet, plain CSS, custom properties for theming.
+ *
+ * No Tailwind, no CSS-in-JS, no preprocessor — because the goal is to learn what
+ * those tools do FOR you. Custom properties, flexbox and grid cover this entire
+ * application, and every tool you meet later is a productivity layer on exactly
+ * these primitives.
+ *
+ * Naming follows BEM: block__element--modifier. It is a convention, not a
+ * technology, and its whole purpose is to keep specificity flat so you never
+ * end up in an !important arms race.
+ */
+
+/* --- Design tokens ------------------------------------------------------- */
+/* Declared once, used everywhere. Changing the accent colour of the whole app
+   is one line here, not forty edits below. */
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --surface-alt: #efece5;
+  --border: #dcd6c8;
+  --ink: #23201b;
+  --ink-muted: #6b655a;
+  --accent: #8a5a2b;
+  --accent-contrast: #ffffff;
+  --focus: #2f6f9f;
+
+  --politics: #4a6fa5;
+  --conflict: #a4453a;
+  --science: #3f7d58;
+  --culture: #8156a6;
+  --disaster: #b06d26;
+  --economy: #2f7a86;
+  --society: #a04a72;
+
+  --radius: 8px;
+  --gap: 1rem;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Dark mode is a TOKEN SWAP. No component below knows a theme exists — it
+   respects the reader's operating system setting rather than forcing a choice. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17150f;
+    --surface: #211e17;
+    --surface-alt: #2b271e;
+    --border: #3d382c;
+    --ink: #ece7dc;
+    --ink-muted: #a49c8c;
+    --accent: #d8a05e;
+    --accent-contrast: #17150f;
+    --focus: #7fb8e0;
+
+    --politics: #8ba9d8;
+    --conflict: #dd8478;
+    --science: #7fbf97;
+    --culture: #b795d6;
+    --disaster: #e0a463;
+    --economy: #6fb9c4;
+    --society: #d489ab;
+  }
+}
+
+/* --- Base ---------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  line-height: 1.55;
+}
+
+/* A visible focus ring is not optional: it is how keyboard users know where
+   they are. `:focus-visible` shows it for keyboard use but not for mouse
+   clicks, which is why you can style it boldly. NEVER `outline: none`. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Hides text visually while keeping it available to screen readers. Note it is
+   NOT `display: none`, which would hide it from assistive technology too. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Layout -------------------------------------------------------------- */
+
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  /* clamp(min, preferred, max): fluid padding with no media query. */
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+.app__title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  letter-spacing: -0.02em;
+}
+
+.app__tagline {
+  margin: 0.35rem 0 0;
+  max-width: 60ch;
+  color: var(--ink-muted);
+}
+
+.app__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  margin-top: 1.75rem;
+}
+
+/* MOBILE FIRST: one column is the default, and the wide layout is the
+   enhancement inside a min-width query. Written the other way round you end up
+   overriding desktop rules on the device with the least power. */
+.app__columns {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 820px) {
+  .app__columns {
+    grid-template-columns: minmax(240px, 1fr) 2fr;
+    align-items: start;
+  }
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem 1.35rem;
+}
+
+.panel__heading {
+  margin: 0 0 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-muted);
+}
+
+.panel__context {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--accent);
+}
+
+.app__footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+
+/* --- Timeline ------------------------------------------------------------ */
+
+.timeline__rail {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 96px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 1.25rem;
+  scrollbar-width: thin;
+}
+
+.timeline__year {
+  position: relative;
+  /* flex: 0 0 auto — do not grow, do not shrink, use the stated width. Without
+     this, 126 buttons would be squashed to nothing instead of scrolling. */
+  flex: 0 0 auto;
+  width: 14px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+/* The bar is a child element so its height is independent of the button's hit
+   area, which stays full-height and comfortably clickable. */
+.timeline__bar {
+  display: block;
+  width: 100%;
+  min-height: 3px;
+  background: var(--accent);
+  opacity: 0.5;
+  border-radius: 2px 2px 0 0;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+.timeline__year:hover .timeline__bar { opacity: 0.85; }
+.timeline__year--empty .timeline__bar { background: var(--border); opacity: 1; }
+.timeline__year--selected .timeline__bar { opacity: 1; background: var(--accent); }
+
+.timeline__year--selected::after {
+  content: "";
+  position: absolute;
+  inset-inline: -1px;
+  bottom: -1.25rem;
+  height: 3px;
+  background: var(--accent);
+}
+
+.timeline__label {
+  position: absolute;
+  bottom: -1.2rem;
+  font-size: 0.65rem;
+  color: var(--ink-muted);
+  /* Tabular numerals stop the year labels from jittering as digits change. */
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__year--decade .timeline__label { font-weight: 600; }
+.timeline__year--selected .timeline__label { color: var(--accent); font-weight: 700; }
+
+.timeline__hint {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+/* --- Country list -------------------------------------------------------- */
+
+.countries__region + .countries__region { margin-top: 1.1rem; }
+
+.countries__region-name {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+}
+
+.countries__list { list-style: none; margin: 0; padding: 0; }
+
+.countries__item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  /* Buttons do NOT inherit the page font by default. Without this they render
+     in the browser's default control font and look out of place. */
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* A SPECIFICITY LESSON, learned the hard way in this project.
+   `.item:hover` is a class plus a pseudo-class (specificity 0,2,0), while
+   `.item--selected` is a single class (0,1,0) — so the hover rule WINS and the
+   selected row rendered light-on-light while the pointer rested on it.
+   The fix is to exclude the selected row from the hover rule, not to escalate
+   with !important. Understand the cascade; do not fight it. */
+.countries__item:not(.countries__item--selected):hover {
+  background: var(--surface-alt);
+}
+
+.countries__item--selected {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.countries__code {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Events -------------------------------------------------------------- */
+
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.event {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem 1rem;
+  background: var(--surface-alt);
+}
+
+.event__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.event__category {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  color: var(--accent-contrast);
+  background: var(--ink-muted);
+}
+
+/* Colour is DECORATION here; the label text carries the meaning. That keeps the
+   category readable for colour-blind users and in monochrome print. Never let
+   colour be the only carrier of information. */
+.event__category--politics { background: var(--politics); }
+.event__category--conflict { background: var(--conflict); }
+.event__category--science  { background: var(--science); }
+.event__category--culture  { background: var(--culture); }
+.event__category--disaster { background: var(--disaster); }
+.event__category--economy  { background: var(--economy); }
+.event__category--society  { background: var(--society); }
+
+.event__date {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.event__title { margin: 0 0 0.35rem; font-size: 1.05rem; line-height: 1.3; }
+.event__summary { margin: 0 0 0.6rem; color: var(--ink); }
+
+.event__source {
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* --- Status messages ----------------------------------------------------- */
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.status--error {
+  display: block;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--conflict);
+  border-radius: var(--radius);
+  color: var(--ink);
+}
+
+.status__title { margin: 0 0 0.5rem; font-weight: 600; }
+
+.status__spinner {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.button {
+  font: inherit;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.button:hover { background: var(--surface-alt); }
+
+/* Some people get motion sickness from animation, and their OS setting says so.
+   Always honour it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

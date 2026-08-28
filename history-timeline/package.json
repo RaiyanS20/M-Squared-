@@ -2,16 +2,29 @@
   "name": "history-timeline",
   "version": "1.0.0",
   "private": true,
-  "description": "Project-based learning: a factual history timeline built with React, Node.js, PostgreSQL and AWS.",
-  "workspaces": ["server", "client"],
+  "description": "Project-based learning: a factual history timeline built with vanilla JavaScript, Node.js, PostgreSQL and AWS.",
+  "type": "module",
   "scripts": {
-    "dev": "npm run dev --workspace=server & npm run dev --workspace=client",
-    "build": "npm run build --workspace=server && npm run build --workspace=client",
-    "test": "npm run test --workspace=server && npm run test --workspace=client",
+    "start": "node server/src/main.js",
+    "dev": "node --watch server/src/main.js",
+    "test": "node --test server/tests/*.test.js client/tests/*.test.js",
+    "test:watch": "node --test --watch server/tests/*.test.js client/tests/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage server/tests/*.test.js client/tests/*.test.js",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
-    "db:migrate": "npm run db:migrate --workspace=server",
-    "db:seed": "npm run db:seed --workspace=server"
+    "db:migrate": "node server/src/scripts/migrate.js",
+    "db:seed": "node server/src/scripts/seed.js"
   },
-  "engines": { "node": ">=20" }
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "jsdom": "^27.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }

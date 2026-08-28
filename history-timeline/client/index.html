@@ -1,22 +1,72 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Inlined as a data URI so the page makes no extra request (and the
-         browser stops asking for a /favicon.ico that does not exist). -->
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%238a5a2b'/%3E%3Cpath d='M6 21h20M9 21V13M15 21V8M21 21V16M27 21v-4' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E"
-    />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>History Timeline — what happened, where, and when</title>
     <meta
       name="description"
       content="Browse a year on the timeline, pick a country, and read what is documented to have happened there."
     />
+    <!-- Inlined as a data URI so the page makes no extra request for it. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%238a5a2b'/%3E%3Cpath d='M6 21h20M9 21V13M15 21V8M21 21V16M27 21v-4' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <!--
+      type="module" does four useful things at once:
+        * `import` / `export` work natively — no bundler, no build step
+        * the script is deferred automatically, so the DOM exists when it runs
+        * it runs in strict mode
+        * top-level variables are scoped to the module, not to `window`
+      This is why this project needs no tooling to run in a browser.
+    -->
+    <script type="module" src="/js/app.js"></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!--
+      The HTML below is the app's STRUCTURE, written once, by hand. JavaScript
+      fills in the three regions marked with an id; it never rebuilds this
+      skeleton. Keeping the shape in HTML means the page is meaningful before a
+      single line of JavaScript runs, and it keeps the JS focused on data.
+    -->
+    <div class="app">
+      <header class="app__header">
+        <h1 class="app__title">History Timeline</h1>
+        <p class="app__tagline">
+          Pick a year, choose a country, and read what is documented to have happened there.
+          Every entry links to its source.
+        </p>
+      </header>
+
+      <main class="app__main">
+        <section class="panel panel--timeline" aria-labelledby="timeline-heading">
+          <h2 id="timeline-heading" class="panel__heading">1. Choose a year</h2>
+          <div id="timeline"></div>
+        </section>
+
+        <div class="app__columns">
+          <section class="panel panel--countries" aria-labelledby="countries-heading">
+            <h2 id="countries-heading" class="panel__heading">
+              2. Choose a country<span id="countries-context" class="panel__context"></span>
+            </h2>
+            <div id="countries"></div>
+          </section>
+
+          <section class="panel panel--events" aria-labelledby="events-heading">
+            <h2 id="events-heading" class="panel__heading">3. What happened</h2>
+            <div id="events"></div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="app__footer">
+        <p>
+          An educational project. Summaries are neutral descriptions of documented events;
+          follow the source link on each card to read further.
+        </p>
+      </footer>
+    </div>
   </body>
 </html>

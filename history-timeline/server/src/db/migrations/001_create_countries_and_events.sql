@@ -4,11 +4,11 @@
 --   * `code` is the natural key (ISO 3166-1 alpha-3) but we still keep a
 --     surrogate integer `id`. Surrogate keys keep foreign keys narrow and let a
 --     country be renamed or recoded without rewriting every child row.
---   * `year` is a plain INTEGER, not a DATE. Most historical events do not have
---     a reliable day, and DATE cannot represent "sometime in 1347". `month_day`
---     carries the extra precision when we happen to have it.
+--   * `year` is a plain INTEGER, not a DATE. Most historical events have no
+--     reliable day, and DATE cannot represent "sometime in 1347". `month_day`
+--     carries the extra precision on the occasions we have it.
 --   * ON DELETE CASCADE: deleting a country deletes its events. Orphan events
---     would be unreachable rows that silently inflate every count.
+--     would be unreachable rows that still inflate every count.
 
 CREATE TABLE countries (
     id      SERIAL PRIMARY KEY,
@@ -29,9 +29,9 @@ CREATE TABLE historical_events (
     source_url  TEXT    NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    -- The database enforces the same invariants as the domain objects. Belt and
-    -- braces: application code can be bypassed (psql, a bad script), the
-    -- database cannot.
+    -- The database enforces the same invariants as the domain objects.
+    -- Belt and braces: application code can be bypassed (psql, a bulk import,
+    -- a future service in another language). The database cannot.
     CONSTRAINT events_year_in_range   CHECK (year BETWEEN 100 AND 2200),
     CONSTRAINT events_month_day_shape CHECK (month_day IS NULL OR month_day ~ '^\d{2}-\d{2}$'),
     CONSTRAINT events_title_length    CHECK (char_length(title) BETWEEN 1 AND 160),
@@ -45,5 +45,5 @@ CREATE TABLE historical_events (
 );
 
 -- The MVP's hot query is "events for (year, country)". A composite index in
--- that column order serves both that query and the broader "events for (year)".
+-- this column order serves that AND the broader "events for (year)".
 CREATE INDEX idx_events_year_country ON historical_events (year, country_id);
